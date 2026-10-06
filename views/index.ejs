@@ -2,9 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Realtime Tracker</title>
-    <link rel="stylesheet" href="/css/style.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>GeoPulse | Realtime Live Tracker</title>
+    <meta name="description" content="Ultra-modern real-time geolocation tracker with dynamic rooms, telemetry, and live movement visualization." />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <!-- Leaflet CSS -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
@@ -12,10 +30,220 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/style.css" />
   </head>
   <body>
+    <!-- Full-screen Leaflet Map -->
     <div id="map"></div>
 
+    <!-- Floating Top Navigation Bar -->
+    <header class="glass-bar top-bar">
+      <div class="brand-group">
+        <div class="radar-dot-wrapper">
+          <span class="radar-ping"></span>
+          <span class="radar-core"></span>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-title">GeoPulse</h1>
+          <span class="brand-subtitle">Live GPS Grid</span>
+        </div>
+      </div>
+
+      <div class="top-center-stats">
+        <button id="roomBadgeBtn" class="pill-btn room-pill" title="Click to copy invite link">
+          <i class="fa-solid fa-satellite-dish"></i>
+          <span id="roomNameLabel">#global</span>
+          <i class="fa-regular fa-copy copy-icon"></i>
+        </button>
+
+        <div class="pill-btn users-pill">
+          <i class="fa-solid fa-users"></i>
+          <span id="onlineCountLabel">1 Online</span>
+        </div>
+
+        <div id="connectionStatus" class="status-indicator online">
+          <span class="status-dot"></span>
+          <span class="status-text">Connected</span>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button id="togglePanelBtn" class="icon-action-btn" title="Toggle Dashboard">
+          <i class="fa-solid fa-sliders"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Floating Map Control Dock (Bottom / Right) -->
+    <aside class="map-controls-dock">
+      <button id="recenterBtn" class="dock-btn" title="Center My Location">
+        <i class="fa-solid fa-crosshairs"></i>
+        <span class="dock-tooltip">Center Me</span>
+      </button>
+
+      <button id="fitAllBtn" class="dock-btn" title="View All Users">
+        <i class="fa-solid fa-expand"></i>
+        <span class="dock-tooltip">Fit All</span>
+      </button>
+
+      <button id="toggleSharingBtn" class="dock-btn active-sharing" title="Pause / Resume Sharing">
+        <i class="fa-solid fa-location-arrow"></i>
+        <span class="dock-tooltip">Broadcast On</span>
+      </button>
+
+      <div class="layer-dropdown-wrapper">
+        <button id="layerToggleBtn" class="dock-btn" title="Switch Map Theme">
+          <i class="fa-solid fa-layer-group"></i>
+          <span class="dock-tooltip">Map Style</span>
+        </button>
+        <div id="layerMenu" class="layer-menu glass-panel">
+          <button class="layer-option active" data-layer="dark">
+            <i class="fa-solid fa-moon"></i> Dark Matter
+          </button>
+          <button class="layer-option" data-layer="streets">
+            <i class="fa-solid fa-road"></i> Vibrant Street
+          </button>
+          <button class="layer-option" data-layer="satellite">
+            <i class="fa-solid fa-earth-americas"></i> Satellite View
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Floating Collapsible Telemetry Dashboard -->
+    <aside id="telemetryDrawer" class="glass-panel telemetry-drawer open">
+      <div class="drawer-header">
+        <div class="drawer-header-title">
+          <i class="fa-solid fa-gauge-high"></i>
+          <span>Live Telemetry</span>
+        </div>
+        <button id="closeDrawerBtn" class="close-drawer-btn" title="Minimize Panel">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Current User Identity Card -->
+      <div class="user-card">
+        <div class="user-avatar" id="myAvatarBadge" style="background-color: #3b82f6;">ME</div>
+        <div class="user-meta">
+          <div class="user-name-row">
+            <span id="myUsernameDisplay" class="my-username">You</span>
+            <button id="editUsernameBtn" class="mini-edit-btn" title="Change nickname">
+              <i class="fa-solid fa-pencil"></i>
+            </button>
+          </div>
+          <span id="mySharingStatus" class="sharing-pill broadcasting">
+            <i class="fa-solid fa-circle-dot"></i> Live Broadcasting
+          </span>
+        </div>
+      </div>
+
+      <!-- Live GPS Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon-box blue">
+            <i class="fa-solid fa-gauge"></i>
+          </div>
+          <div class="metric-data">
+            <span class="metric-title">Speed</span>
+            <span id="metricSpeed" class="metric-val">0.0 <small>km/h</small></span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon-box green">
+            <i class="fa-solid fa-bullseye"></i>
+          </div>
+          <div class="metric-data">
+            <span class="metric-title">Accuracy</span>
+            <span id="metricAccuracy" class="metric-val">-- <small>m</small></span>
+          </div>
+        </div>
+
+        <div class="metric-card full-width">
+          <div class="metric-icon-box purple">
+            <i class="fa-solid fa-map-pin"></i>
+          </div>
+          <div class="metric-data">
+            <span class="metric-title">Current Coordinates</span>
+            <span id="metricCoords" class="metric-val coords-val">Acquiring GPS...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Peers in Room List -->
+      <div class="peers-section">
+        <div class="peers-header">
+          <span>Active Trackers</span>
+          <span id="peersCountBadge" class="count-tag">1</span>
+        </div>
+        <div id="peersList" class="peers-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- Join / Settings Modal -->
+    <div id="joinModal" class="modal-overlay">
+      <div class="glass-panel modal-card">
+        <div class="modal-header">
+          <div class="modal-icon">
+            <i class="fa-solid fa-location-crosshairs"></i>
+          </div>
+          <h2>Join Radar Session</h2>
+          <p>Choose your display handle and room channel to start sharing locations in real time.</p>
+        </div>
+
+        <form id="joinForm" class="modal-form">
+          <div class="form-group">
+            <label for="usernameInput"><i class="fa-solid fa-user"></i> Display Name</label>
+            <input
+              type="text"
+              id="usernameInput"
+              placeholder="e.g. Maverick, Atlas, Sarah"
+              maxlength="20"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="roomInput"><i class="fa-solid fa-satellite"></i> Room Channel</label>
+            <div class="input-with-action">
+              <input
+                type="text"
+                id="roomInput"
+                placeholder="e.g. global, expedition-alpha"
+                maxlength="30"
+                value="global"
+                required
+              />
+              <button type="button" id="randomRoomBtn" class="pill-btn" title="Random Room">
+                <i class="fa-solid fa-dice"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label><i class="fa-solid fa-palette"></i> Choose Radar Marker Color</label>
+            <div id="colorPickerRow" class="color-picker-row">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn">
+            <span>Enter Live Grid</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Notification Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Leaflet JS -->
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"
       integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g=="
@@ -23,12 +251,14 @@
       referrerpolicy="no-referrer"
     ></script>
 
+    <!-- Socket.IO JS -->
     <script
       src="https://cdn.socket.io/4.8.1/socket.io.min.js"
       integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+"
       crossorigin="anonymous"
     ></script>
 
+    <!-- App Script -->
     <script src="/js/script.js"></script>
   </body>
 </html>
